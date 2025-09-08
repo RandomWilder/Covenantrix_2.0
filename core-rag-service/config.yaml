@@ -1,0 +1,188 @@
+# config.yaml
+# Covenantrix RAG Service Configuration
+
+# Application Settings
+app:
+  name: "Covenantrix RAG Service"
+  version: "1.0.0"
+  debug: false
+  
+# Storage Configuration
+storage:
+  working_directory: "./covenantrix_data"
+  
+  # KV Storage (document metadata, cache)
+  kv_storage: "JsonKVStorage"  # JsonKVStorage, PGKVStorage, RedisKVStorage, MongoKVStorage
+  
+  # Vector Storage (embeddings)
+  vector_storage: "NanoVectorDBStorage"  # NanoVectorDBStorage, FaissVectorDBStorage, PGVectorStorage, MilvusVectorDBStorage
+  
+  # Graph Storage (knowledge graph)
+  graph_storage: "NetworkXStorage"  # NetworkXStorage, Neo4JStorage, PGGraphStorage
+  
+  # Document Status Storage
+  doc_status_storage: "JsonDocStatusStorage"
+
+# LLM Configuration
+llm:
+  # OpenAI Settings
+  openai:
+    model: "gpt-4o-mini"
+    api_key_env: "OPENAI_API_KEY"
+    max_tokens: 4000
+    temperature: 0.1
+    
+  # Model-specific settings
+  models:
+    legal_advisor:
+      model: "gpt-4o-mini"
+      temperature: 0.1
+      max_tokens: 4000
+    
+    legal_writer:
+      model: "gpt-4o"  # Use stronger model for writing
+      temperature: 0.3
+      max_tokens: 6000
+    
+    contract_analyst:
+      model: "gpt-4o-mini"
+      temperature: 0.1
+      max_tokens: 4000
+
+# Embedding Configuration
+embeddings:
+  provider: "openai"  # openai, huggingface, local
+  
+  openai:
+    model: "text-embedding-3-small"
+    dimensions: 1536
+    
+  # Alternative: sentence-transformers (local)
+  # huggingface:
+  #   model: "sentence-transformers/all-MiniLM-L6-v2"
+  #   dimensions: 384
+
+# Document Processing Settings
+document_processing:
+  # Chunking settings
+  chunk_token_size: 800
+  chunk_overlap_token_size: 100
+  
+  # OCR settings
+  ocr:
+    primary_engine: "textract"      # textract, tesseract
+    fallback_engine: "tesseract"
+    languages: ["eng", "heb", "ara"]  # English, Hebrew, Arabic
+  
+  # Entity extraction settings
+  entity_extraction:
+    max_gleaning: 2
+    max_parallel_insert: 1  # Reduced for Hebrew stability
+    
+  # Hebrew/RTL specific settings
+  hebrew_processing:
+    enable_hebrew_support: true
+    preserve_number_order: true  # Preserve L-R number order in RTL text
+    timeout_multiplier: 2.0  # Increase timeouts for Hebrew processing
+  
+  # File type support
+  supported_formats:
+    - ".pdf"
+    - ".docx"
+    - ".doc"
+    - ".txt"
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".tiff"
+
+# Query Settings
+query:
+  # Default query parameters
+  defaults:
+    mode: "hybrid"
+    top_k: 60
+    chunk_top_k: 15
+    max_entity_tokens: 12000
+    max_relation_tokens: 12000
+    max_total_tokens: 32000
+    enable_rerank: true
+  
+  # Response settings
+  response:
+    default_type: "Multiple Paragraphs"
+    include_citations: true
+    max_follow_up_questions: 3
+    
+  # Language-specific settings
+  language:
+    auto_detect: true
+    respond_in_query_language: true  # Always respond in same language as query
+    supported_languages: ["en", "he"]
+    hebrew_response_format: "rtl_aware"  # RTL-aware formatting
+  
+  # Confidence scoring
+  confidence:
+    min_score: 0.1
+    source_boost: 0.2
+    quality_indicator_boost: 0.05
+    uncertainty_penalty: 0.1
+
+# Persona-specific settings
+personas:
+  legal_advisor:
+    specialties: ["contract_review", "risk_assessment", "legal_compliance"]
+    response_style: "detailed_analysis"
+    preferred_mode: "hybrid"
+    
+  contract_analyst:
+    specialties: ["contract_analysis", "term_extraction", "obligation_mapping"]
+    response_style: "systematic_breakdown"
+    preferred_mode: "local"
+    
+  risk_assessor:
+    specialties: ["risk_identification", "impact_assessment", "mitigation_strategies"]
+    response_style: "risk_focused_analysis"
+    preferred_mode: "global"
+    
+  legal_writer:
+    specialties: ["document_drafting", "clause_improvement", "legal_writing"]
+    response_style: "constructive_editing"
+    preferred_mode: "hybrid"
+    
+  compliance_officer:
+    specialties: ["regulatory_compliance", "standards_verification", "gap_analysis"]
+    response_style: "compliance_checklist"
+    preferred_mode: "global"
+
+# Analytics and Logging
+analytics:
+  enable_query_logging: true
+  max_query_history: 1000
+  log_level: "INFO"
+  
+# Performance Settings
+performance:
+  # Memory management
+  max_concurrent_queries: 5
+  query_timeout: 120  # seconds (increased for Hebrew processing)
+  
+  # Hebrew/RTL processing settings
+  hebrew_processing_timeout: 180  # seconds
+  worker_timeout: 120  # seconds for async workers
+  max_async_workers: 2  # Reduced for Hebrew processing stability
+  
+  # Caching
+  enable_llm_cache: true
+  enable_embedding_cache: true
+  cache_ttl: 3600  # 1 hour
+  
+# Security Settings
+security:
+  # API security (for future server mode)
+  api_key_required: false
+  rate_limit_per_minute: 60
+  
+  # Data privacy
+  log_sensitive_data: false
+  encrypt_storage: false  # Enable for production

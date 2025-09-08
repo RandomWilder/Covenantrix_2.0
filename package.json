@@ -1,0 +1,76 @@
+{
+  "name": "covenantrix-desktop",
+  "version": "1.0.0",
+  "description": "Covenantrix - AI-Powered Legal Document Analysis Desktop Application",
+  "main": "electron-app/src/main.js",
+  "author": "Covenantrix Team",
+  "license": "MIT",
+  "private": true,
+  "homepage": "./",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "ELECTRON_IS_DEV=true electron .",
+    "electron-dev-win": "set ELECTRON_IS_DEV=true && electron .",
+    "start": "npm run electron-dev-win",
+    "build": "npm run build:react && npm run build:electron",
+    "build:react": "cd electron-app && npm run build",
+    "build:electron": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac", 
+    "build:linux": "electron-builder --linux",
+    "dist": "npm run build",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "electron-updater": "^6.1.4",
+    "form-data": "^4.0.0"
+  },
+  "build": {
+    "appId": "com.covenantrix.desktop",
+    "productName": "Covenantrix",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-app/build/**/*",
+      "electron-app/src/main.js",
+      "electron-app/src/preload.js",
+      "core-rag-service/**/*",
+      "!core-rag-service/covenantrix_data/**/*",
+      "!core-rag-service/__pycache__/**/*",
+      "!core-rag-service/test_service.py",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "core-rag-service/",
+        "to": "core-rag-service/",
+        "filter": ["**/*", "!covenantrix_data/**/*", "!__pycache__/**/*", "!test_service.py"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron-app/assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron-app/assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron-app/assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "electron-app/assets/icon.ico",
+      "uninstallerIcon": "electron-app/assets/icon.ico"
+    }
+  }
+}
