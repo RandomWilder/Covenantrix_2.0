@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.7] - 2025-09-08
+
+### 🔧 Build System Fixes
+- **Single Workflow Strategy**: Removed conflicting `build-release.yml`, consolidated on comprehensive `release.yml` workflow
+- **Enhanced PyInstaller Reliability**: Improved build diagnostics, working directory handling, and dependency installation order
+- **Better Error Detection**: Added robust pre-flight checks and detailed error reporting for build failures
+
+### 💡 Improvements
+- **Streamlined Release Process**: Single, reliable build and release workflow eliminates confusion and build conflicts
+- **Development Experience**: Better build failure diagnostics for faster issue resolution
+
+---
+
 ## [1.0.6] - 2025-09-08
 
 ### 🔧 Bug Fixes
