@@ -55,15 +55,8 @@ jobs:
           echo "Directory contents:"
           ls -la
           echo "Checking for spec file:"
-          if [ -f "covenantrix-service.spec" ]; then
-            echo "✅ Spec file found"
-            ls -la covenantrix-service.spec
-          else
-            echo "❌ Spec file not found!"
-            echo "Available files:"
-            find . -name "*.spec" -type f
-            exit 1
-          fi
+          ls -la covenantrix-service.spec || (echo "❌ Spec file not found!" && find . -name "*.spec" -type f && exit 1)
+          echo "✅ Spec file found and accessible"
           echo "Python version check:"
           python --version
           echo "PyInstaller version check:"
