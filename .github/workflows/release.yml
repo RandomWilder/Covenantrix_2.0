@@ -50,6 +50,9 @@ jobs:
       - name: Build Python service executable
         run: |
           echo "Building Python service for ${{ matrix.platform }}..."
+          echo "Current directory: $(pwd)"
+          echo "Checking for spec file:"
+          ls -la covenantrix-service.spec
           pyinstaller covenantrix-service.spec --noconfirm --clean
           echo "Build completed. Checking output..."
           if [ -d "dist" ]; then

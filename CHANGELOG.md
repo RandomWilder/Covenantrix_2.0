@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.6] - 2025-09-08
+
+### 🔧 Bug Fixes
+- **GitHub Actions Build Fixes**: Resolved cross-platform build failures in CI/CD pipeline
+- **Requirements.txt Optimization**: Made `pywin32` and `pywinpty` Windows-only dependencies to fix macOS builds
+- **PyInstaller Diagnostics**: Added build diagnostics to identify working directory issues
+- **Duplicate Dependencies**: Removed duplicate `python-multipart` entry from requirements
+
+### 💡 Improvements 
+- **Build Reliability**: Enhanced GitHub Actions workflow with better error handling and debugging
+- **Cross-Platform Compatibility**: Fixed platform-specific dependency management for reliable multi-OS builds
+
+---
+
 ## [1.0.5] - 2025-09-08
 
 ### 🚀 Major Features
