@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.8] - 2025-09-08
+
+### 🔧 Critical Fixes
+- **GitHub Actions Build Fix**: Fixed spec file detection failure that was breaking both Windows and macOS builds
+- **Workflow Reliability**: Replaced problematic bash file existence test with direct ls command for better cross-platform compatibility
+
+---
+
 ## [1.0.7] - 2025-09-08
 
 ### 🔧 Build System Fixes
