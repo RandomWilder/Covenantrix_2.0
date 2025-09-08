@@ -32,6 +32,8 @@ venv.bak/
 # PyInstaller
 *.manifest
 *.spec
+# Exception: Keep our custom PyInstaller spec file
+!covenantrix-service.spec
 
 # Unit test / coverage reports
 htmlcov/
