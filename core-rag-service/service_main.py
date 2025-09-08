@@ -4,15 +4,25 @@ Covenantrix RAG Service - Web API Wrapper
 Minimal FastAPI service that wraps the existing CLI functionality
 """
 
-import asyncio
-import os
+# Fix Windows console encoding for Unicode characters (emojis)
 import sys
+import os
+if sys.platform.startswith('win'):
+    # Set UTF-8 encoding for Windows console
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    # Reconfigure stdout/stderr for UTF-8
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import json
 import tempfile
@@ -23,6 +33,7 @@ sys.path.append(str(Path(__file__).parent / "src"))
 
 from main import CovenantrixCLI
 from query_engine import PersonaType, QueryMode, QueryContext
+from settings_manager import SettingsManager
 
 # Pydantic models for API contracts
 class QueryRequest(BaseModel):
@@ -64,6 +75,34 @@ class HealthCheck(BaseModel):
     timestamp: str
     documents_processed: int
 
+# Settings API models
+class ProviderKeyRequest(BaseModel):
+    provider: str
+    api_key: str
+
+class ProviderKeyResponse(BaseModel):
+    success: bool
+    message: str
+    provider: str
+
+class ValidationRequest(BaseModel):
+    provider: str
+    api_key: Optional[str] = None
+
+class ValidationResponse(BaseModel):
+    valid: bool
+    provider: str
+    error: Optional[str] = None
+    models: Optional[List[str]] = None
+    organization: Optional[str] = None
+    validated_at: Optional[str] = None
+
+class SettingsResponse(BaseModel):
+    providers: Dict[str, Dict[str, Any]]
+    preferences: Dict[str, Any]
+    created_at: str
+    updated_at: str
+
 # Global service instance
 service_instance = None
 processing_tasks = {}
@@ -74,7 +113,8 @@ class CovenantrixService:
     """
     
     def __init__(self):
-        self.cli = CovenantrixCLI()
+        self.settings_manager = SettingsManager("./covenantrix_data")
+        self.cli = CovenantrixCLI(settings_manager=self.settings_manager)
         self.initialized = False
         self.temp_dir = Path(tempfile.gettempdir()) / "covenantrix_uploads"
         self.temp_dir.mkdir(exist_ok=True)
@@ -83,6 +123,11 @@ class CovenantrixService:
         """Initialize the RAG system"""
         if not self.initialized:
             print("🚀 Initializing Covenantrix Service...")
+            
+            # Initialize settings manager first
+            await self.settings_manager.initialize()
+            print("✅ Settings manager initialized")
+            
             await self.cli.initialize()
             self.initialized = True
             print("✅ Service initialized successfully!")
@@ -198,11 +243,22 @@ class CovenantrixService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
 
-# FastAPI app setup
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern FastAPI lifespan event handler"""
+    # Startup
+    global service_instance
+    service_instance = CovenantrixService()
+    print("🌟 Covenantrix Service API started!")
+    yield
+    # Shutdown (add cleanup here if needed)
+
+# FastAPI app setup with lifespan
 app = FastAPI(
     title="Covenantrix RAG Service",
     description="AI-powered legal document analysis service",
-    version="1.0.4"
+    version="1.0.5",
+    lifespan=lifespan
 )
 
 # Add CORS middleware for local development
@@ -214,13 +270,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize service on startup"""
-    global service_instance
-    service_instance = CovenantrixService()
-    print("🌟 Covenantrix Service API started!")
-
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
     """Health check endpoint"""
@@ -228,14 +277,14 @@ async def health_check():
         documents = await service_instance.list_documents() if service_instance.initialized else []
         return HealthCheck(
             status="healthy",
-            version="1.0.4",
+            version="1.0.5",
             timestamp=datetime.now().isoformat(),
             documents_processed=len(documents)
         )
     except:
         return HealthCheck(
             status="starting",
-            version="1.0.4", 
+            version="1.0.5", 
             timestamp=datetime.now().isoformat(),
             documents_processed=0
         )
@@ -368,15 +417,109 @@ async def get_query_modes():
         ]
     }
 
+# Settings Management Endpoints
+
+@app.get("/api/settings", response_model=SettingsResponse)
+async def get_settings():
+    """Get all user settings"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    settings_data = await service_instance.settings_manager.get_all_settings()
+    return SettingsResponse(**settings_data)
+
+@app.get("/api/settings/providers")
+async def get_providers():
+    """Get available providers and their status"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    settings_data = await service_instance.settings_manager.get_all_settings()
+    return {"providers": settings_data["providers"]}
+
+@app.put("/api/settings/providers/{provider}/api-key", response_model=ProviderKeyResponse)
+async def set_provider_api_key(provider: str, request: ProviderKeyRequest):
+    """Set API key for a provider"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    if provider != request.provider:
+        raise HTTPException(status_code=400, detail="Provider in URL and body must match")
+    
+    success = await service_instance.settings_manager.set_api_key(provider, request.api_key)
+    
+    if success:
+        return ProviderKeyResponse(
+            success=True,
+            message=f"API key for {provider} set successfully",
+            provider=provider
+        )
+    else:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to set API key for {provider}"
+        )
+
+@app.delete("/api/settings/providers/{provider}/api-key", response_model=ProviderKeyResponse)
+async def delete_provider_api_key(provider: str):
+    """Delete API key for a provider"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    success = await service_instance.settings_manager.delete_api_key(provider)
+    
+    if success:
+        return ProviderKeyResponse(
+            success=True,
+            message=f"API key for {provider} deleted successfully",
+            provider=provider
+        )
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete API key for {provider}"
+        )
+
+@app.post("/api/settings/providers/{provider}/validate", response_model=ValidationResponse)
+async def validate_provider_api_key(provider: str, request: Optional[ValidationRequest] = None):
+    """Validate API key for a provider"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    # Use provided API key or get from settings
+    api_key = None
+    if request and request.api_key:
+        api_key = request.api_key
+    
+    validation_result = await service_instance.settings_manager.validate_api_key(provider, api_key)
+    
+    # Update validation status in settings
+    if validation_result.get("valid"):
+        await service_instance.settings_manager.update_validation_status(provider, validation_result)
+    
+    return ValidationResponse(**validation_result)
+
+@app.get("/api/settings/active-provider")
+async def get_active_provider():
+    """Get currently active provider"""
+    if not service_instance.initialized:
+        await service_instance.initialize()
+    
+    active_provider = await service_instance.settings_manager.get_active_provider()
+    
+    return {
+        "active_provider": active_provider,
+        "has_active_provider": active_provider is not None
+    }
+
 def main():
     """Run the service"""
     print("🚀 Starting Covenantrix RAG Service...")
     print("📖 API documentation will be available at http://localhost:8080/docs")
     
-    # Check for OpenAI API key
-    if not os.getenv('OPENAI_API_KEY'):
-        print("⚠️  WARNING: OPENAI_API_KEY environment variable not set")
-        print("The service will start but document processing will fail without an API key")
+    # Note: API key checking is now handled by the settings manager
+    # The service can start without an API key and users can configure it via the settings UI
+    print("💡 Configure your OpenAI API key via the settings API: PUT /api/settings/providers/openai/api-key")
     
     uvicorn.run(
         "service_main:app",

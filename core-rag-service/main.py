@@ -4,10 +4,19 @@ Main entry point for Covenantrix RAG Service
 Provides both CLI testing interface and FastAPI server
 """
 
+# Fix Windows console encoding for Unicode characters (emojis)
+import sys
+import os
+if sys.platform.startswith('win'):
+    # Set UTF-8 encoding for Windows console
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    # Reconfigure stdout/stderr for UTF-8
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+
 import asyncio
 import argparse
-import os
-import sys
 from pathlib import Path
 from typing import List, Optional
 import json
@@ -26,9 +35,10 @@ class CovenantrixCLI:
     Command-line interface for testing Covenantrix RAG capabilities
     """
     
-    def __init__(self):
+    def __init__(self, settings_manager=None):
         self.doc_processor = None
         self.query_engine = None
+        self.settings_manager = settings_manager
         self.initialized = False
     
     async def initialize(self):
@@ -39,11 +49,29 @@ class CovenantrixCLI:
         print("🚀 Initializing Covenantrix RAG System...")
         print("⏳ This may take a few moments on first run...")
         
-        # Check for OpenAI API key
-        if not os.getenv('OPENAI_API_KEY'):
-            print("❌ ERROR: OPENAI_API_KEY environment variable not set")
-            print("Please set your OpenAI API key: export OPENAI_API_KEY='your_key_here'")
+        # Check for OpenAI API key from settings or environment
+        openai_api_key = None
+        
+        if self.settings_manager:
+            try:
+                openai_api_key = await self.settings_manager.get_api_key("openai")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not load API key from settings: {e}")
+        
+        # Fallback to environment variable
+        if not openai_api_key:
+            openai_api_key = os.getenv('OPENAI_API_KEY')
+        
+        if not openai_api_key:
+            print("❌ ERROR: OpenAI API key not found")
+            print("Please either:")
+            print("  1. Set via settings API: PUT /api/settings/providers/openai/api-key")
+            print("  2. Set environment variable: export OPENAI_API_KEY='your_key_here'")
             sys.exit(1)
+        
+        # Set the API key in environment for LightRAG compatibility
+        os.environ['OPENAI_API_KEY'] = openai_api_key
+        print("✅ OpenAI API key loaded successfully")
         
         try:
             # Initialize document processor

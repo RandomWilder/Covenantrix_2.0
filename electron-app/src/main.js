@@ -44,8 +44,8 @@ class CovenantrixApp {
         this.mainWindow.once('ready-to-show', () => {
             this.mainWindow.show();
             
-            // Connect to existing Python service
-            this.connectToExistingService();
+            // Auto-start Python service first, then connect
+            this.autoStartAndConnect();
         });
 
         // Handle window closed
@@ -69,7 +69,7 @@ class CovenantrixApp {
                 if (response.status === 200) {
                     console.log('✅ Connected to Python service successfully!');
                     this.mainWindow.webContents.send('service-ready', this.serviceUrl);
-                    return;
+                    return true;
                 }
             } catch (error) {
                 // Service not responding yet, wait and retry
@@ -78,7 +78,39 @@ class CovenantrixApp {
         }
 
         console.error('❌ Could not connect to Python service');
-        await this.showServiceConnectionOptions();
+        return false;
+    }
+
+    async autoStartAndConnect() {
+        console.log('🚀 Auto-starting Covenantrix service...');
+        
+        // First, quickly check if service is already running
+        try {
+            const response = await axios.get(`${this.serviceUrl}/health`, { timeout: 2000 });
+            if (response.status === 200) {
+                console.log('✅ Service already running, connecting...');
+                this.mainWindow.webContents.send('service-ready', this.serviceUrl);
+                return;
+            }
+        } catch (error) {
+            // Service not running, need to start it
+            console.log('🔄 Service not running, starting automatically...');
+        }
+        
+        // Automatically start the appropriate service
+        const started = await this.startPythonService();
+        if (!started) {
+            console.error('❌ Failed to start Python service automatically');
+            await this.showServiceConnectionOptions();
+            return;
+        }
+        
+        // Connect to the started service
+        const connected = await this.connectToExistingService(20);
+        if (!connected) {
+            console.error('❌ Failed to connect after starting service');
+            await this.showServiceConnectionOptions();
+        }
     }
 
     async showServiceConnectionOptions() {
@@ -148,24 +180,18 @@ class CovenantrixApp {
             
             this.pythonProcess.on('error', (error) => {
                 console.error('Python Service Process Error:', error);
-                this.showServiceError();
             });
             
             this.pythonProcess.on('exit', (code, signal) => {
                 console.log(`Python Service exited with code ${code} and signal ${signal}`);
-                if (code !== 0 && code !== null) {
-                    this.showServiceError();
-                }
             });
             
-            // Wait for service to start, then connect
-            setTimeout(() => {
-                this.connectToExistingService(15);
-            }, 3000);
+            console.log('✅ Bundled Python service process started');
+            return true;
             
         } catch (error) {
             console.error('Failed to start bundled Python service:', error);
-            this.showServiceError();
+            return false;
         }
     }
 
@@ -177,11 +203,22 @@ class CovenantrixApp {
         try {
             // Construct path to Python service (original venv approach)
             const projectRoot = path.join(__dirname, '../../');
-            const venvPython = path.join(projectRoot, 'venv', 'Scripts', 'python.exe');
+            const venvBinDir = process.platform === 'win32' ? 'Scripts' : 'bin';
+            const venvPythonExe = process.platform === 'win32' ? 'python.exe' : 'python';
+            const venvPython = path.join(projectRoot, 'venv', venvBinDir, venvPythonExe);
             const serviceScript = path.join(projectRoot, 'core-rag-service', 'service_main.py');
             
             console.log(`🔧 Development fallback - using: ${venvPython}`);
             console.log(`📄 Service script: ${serviceScript}`);
+            
+            // Verify venv python exists
+            const fs = require('fs');
+            if (!fs.existsSync(venvPython)) {
+                throw new Error(`Venv Python executable not found at: ${venvPython}`);
+            }
+            if (!fs.existsSync(serviceScript)) {
+                throw new Error(`Service script not found at: ${serviceScript}`);
+            }
             
             // Start the Python service with venv
             this.pythonProcess = spawn(venvPython, [serviceScript], {
@@ -199,24 +236,18 @@ class CovenantrixApp {
             
             this.pythonProcess.on('error', (error) => {
                 console.error('Python Service Process Error (venv):', error);
-                this.showServiceError();
             });
             
             this.pythonProcess.on('exit', (code, signal) => {
                 console.log(`Python Service (venv) exited with code ${code} and signal ${signal}`);
-                if (code !== 0 && code !== null) {
-                    this.showServiceError();
-                }
             });
             
-            // Wait for service to start, then connect
-            setTimeout(() => {
-                this.connectToExistingService(15);
-            }, 3000);
+            console.log('✅ Venv Python service process started');
+            return true;
             
         } catch (error) {
             console.error('Failed to start venv Python service:', error);
-            this.showServiceError();
+            return false;
         }
     }
 
@@ -359,7 +390,7 @@ class CovenantrixApp {
                                 type: 'info',
                                 title: 'About Covenantrix',
                                 message: 'Covenantrix Desktop',
-                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.4'
+                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.5'
                             });
                         }
                     },
