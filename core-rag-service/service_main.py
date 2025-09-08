@@ -257,7 +257,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Covenantrix RAG Service",
     description="AI-powered legal document analysis service",
-    version="1.0.8",
+    version="1.0.9",
     lifespan=lifespan
 )
 
@@ -277,14 +277,14 @@ async def health_check():
         documents = await service_instance.list_documents() if service_instance.initialized else []
         return HealthCheck(
             status="healthy",
-            version="1.0.8",
+            version="1.0.9",
             timestamp=datetime.now().isoformat(),
             documents_processed=len(documents)
         )
     except:
         return HealthCheck(
             status="starting",
-            version="1.0.8", 
+            version="1.0.9", 
             timestamp=datetime.now().isoformat(),
             documents_processed=0
         )

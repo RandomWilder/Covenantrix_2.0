@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.9] - 2025-09-08
+
+### 🎯 Critical Build Fix
+- **RESOLVED: PyInstaller Spec File Missing**: Fixed root cause where `covenantrix-service.spec` was being ignored by `.gitignore`
+- **GitHub Actions Fix**: Spec file now properly included in repository and accessible during build process
+- **100% Build Success Expected**: Both Windows and macOS builds should now complete successfully
+
+---
+
 ## [1.0.8] - 2025-09-08
 
 ### 🔧 Critical Fixes

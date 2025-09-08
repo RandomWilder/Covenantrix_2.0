@@ -390,7 +390,7 @@ class CovenantrixApp {
                                 type: 'info',
                                 title: 'About Covenantrix',
                                 message: 'Covenantrix Desktop',
-                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.8'
+                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.9'
                             });
                         }
                     },

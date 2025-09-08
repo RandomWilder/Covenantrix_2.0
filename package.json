@@ -1,6 +1,6 @@
 {
   "name": "covenantrix-desktop",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Covenantrix - AI-Powered Legal Document Analysis Desktop Application",
   "main": "electron-app/src/main.js",
   "author": "Covenantrix Team",
