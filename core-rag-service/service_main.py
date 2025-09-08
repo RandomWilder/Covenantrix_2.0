@@ -202,7 +202,7 @@ class CovenantrixService:
 app = FastAPI(
     title="Covenantrix RAG Service",
     description="AI-powered legal document analysis service",
-    version="1.0.3"
+    version="1.0.4"
 )
 
 # Add CORS middleware for local development
@@ -228,14 +228,14 @@ async def health_check():
         documents = await service_instance.list_documents() if service_instance.initialized else []
         return HealthCheck(
             status="healthy",
-            version="1.0.3",
+            version="1.0.4",
             timestamp=datetime.now().isoformat(),
             documents_processed=len(documents)
         )
     except:
         return HealthCheck(
             status="starting",
-            version="1.0.3", 
+            version="1.0.4", 
             timestamp=datetime.now().isoformat(),
             documents_processed=0
         )
