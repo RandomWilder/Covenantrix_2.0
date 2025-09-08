@@ -31,8 +31,10 @@ class CovenantrixApp {
             show: false, // Don't show until ready
         });
 
-        // Load the app from build directory (Electron standard)
-        this.mainWindow.loadFile(path.join(__dirname, '../build/index.html'));
+        // Load the app - handle both development and packaged app paths
+        const htmlPath = this.getHtmlFilePath();
+        console.log(`📁 Loading HTML from: ${htmlPath}`);
+        this.mainWindow.loadFile(htmlPath);
         
         if (isDev) {
             this.mainWindow.webContents.openDevTools();
@@ -257,6 +259,29 @@ class CovenantrixApp {
         
         console.log(`🎯 Target executable path: ${executablePath}`);
         return executablePath;
+    }
+
+    getHtmlFilePath() {
+        const path = require('path');
+        const { app } = require('electron');
+        
+        // Determine if running in development or packaged app
+        const isPackaged = app.isPackaged;
+        console.log(`📦 App packaged: ${isPackaged}`);
+        
+        let htmlPath;
+        
+        if (isPackaged) {
+            // In packaged app: use app.getAppPath() for reliable path resolution
+            const appPath = app.getAppPath();
+            htmlPath = path.join(appPath, 'electron-app', 'build', 'index.html');
+        } else {
+            // In development: relative path from main.js location
+            htmlPath = path.join(__dirname, '../build/index.html');
+        }
+        
+        console.log(`🎯 HTML file path: ${htmlPath}`);
+        return htmlPath;
     }
 
     showServiceError() {
