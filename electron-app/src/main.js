@@ -104,20 +104,36 @@ class CovenantrixApp {
     }
 
     async startPythonService() {
-        console.log('🚀 Starting Python service automatically...');
+        console.log('🚀 Starting bundled Python service automatically...');
         const { spawn } = require('child_process');
         const path = require('path');
+        const fs = require('fs');
         
         try {
-            // Construct path to Python service
-            const projectRoot = path.join(__dirname, '../../');
-            const venvPython = path.join(projectRoot, 'venv', 'Scripts', 'python.exe');
-            const serviceScript = path.join(projectRoot, 'core-rag-service', 'service_main.py');
+            const executablePath = this.getPythonExecutablePath();
             
-            // Start the Python service
-            this.pythonProcess = spawn(venvPython, [serviceScript], {
-                cwd: path.join(projectRoot, 'core-rag-service'),
-                stdio: ['ignore', 'pipe', 'pipe']
+            if (!executablePath) {
+                // Fallback to venv approach for development
+                console.log('📋 Using venv fallback for development');
+                return this.startPythonServiceVenvFallback();
+            }
+            
+            console.log(`📁 Using bundled Python executable: ${executablePath}`);
+            
+            // Verify executable exists
+            if (!fs.existsSync(executablePath)) {
+                throw new Error(`Python executable not found at: ${executablePath}`);
+            }
+            
+            // Set working directory to executable directory (for config.yaml)
+            const workingDir = path.dirname(executablePath);
+            
+            // Start the bundled Python service
+            this.pythonProcess = spawn(executablePath, [], {
+                cwd: workingDir,
+                stdio: ['ignore', 'pipe', 'pipe'],
+                // Ensure executable permissions on Unix
+                detached: false
             });
             
             this.pythonProcess.stdout.on('data', (data) => {
@@ -128,22 +144,137 @@ class CovenantrixApp {
                 console.error(`Python Service Error: ${data}`);
             });
             
+            this.pythonProcess.on('error', (error) => {
+                console.error('Python Service Process Error:', error);
+                this.showServiceError();
+            });
+            
+            this.pythonProcess.on('exit', (code, signal) => {
+                console.log(`Python Service exited with code ${code} and signal ${signal}`);
+                if (code !== 0 && code !== null) {
+                    this.showServiceError();
+                }
+            });
+            
             // Wait for service to start, then connect
             setTimeout(() => {
                 this.connectToExistingService(15);
             }, 3000);
             
         } catch (error) {
-            console.error('Failed to start Python service:', error);
+            console.error('Failed to start bundled Python service:', error);
             this.showServiceError();
         }
     }
 
+    startPythonServiceVenvFallback() {
+        console.log('🔄 Falling back to venv Python service for development...');
+        const { spawn } = require('child_process');
+        const path = require('path');
+        
+        try {
+            // Construct path to Python service (original venv approach)
+            const projectRoot = path.join(__dirname, '../../');
+            const venvPython = path.join(projectRoot, 'venv', 'Scripts', 'python.exe');
+            const serviceScript = path.join(projectRoot, 'core-rag-service', 'service_main.py');
+            
+            console.log(`🔧 Development fallback - using: ${venvPython}`);
+            console.log(`📄 Service script: ${serviceScript}`);
+            
+            // Start the Python service with venv
+            this.pythonProcess = spawn(venvPython, [serviceScript], {
+                cwd: path.join(projectRoot, 'core-rag-service'),
+                stdio: ['ignore', 'pipe', 'pipe']
+            });
+            
+            this.pythonProcess.stdout.on('data', (data) => {
+                console.log(`Python Service (venv): ${data}`);
+            });
+            
+            this.pythonProcess.stderr.on('data', (data) => {
+                console.error(`Python Service Error (venv): ${data}`);
+            });
+            
+            this.pythonProcess.on('error', (error) => {
+                console.error('Python Service Process Error (venv):', error);
+                this.showServiceError();
+            });
+            
+            this.pythonProcess.on('exit', (code, signal) => {
+                console.log(`Python Service (venv) exited with code ${code} and signal ${signal}`);
+                if (code !== 0 && code !== null) {
+                    this.showServiceError();
+                }
+            });
+            
+            // Wait for service to start, then connect
+            setTimeout(() => {
+                this.connectToExistingService(15);
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Failed to start venv Python service:', error);
+            this.showServiceError();
+        }
+    }
+
+    getPythonExecutablePath() {
+        const path = require('path');
+        const { app } = require('electron');
+        
+        // Determine if running in development or packaged app
+        const isPackaged = app.isPackaged;
+        console.log(`📦 App packaged: ${isPackaged}`);
+        
+        // Get platform-specific executable name
+        const executableName = process.platform === 'win32' ? 'covenantrix-service.exe' : 'covenantrix-service';
+        
+        let executablePath;
+        
+        if (isPackaged) {
+            // In packaged app: executable is in resources/python-service/
+            if (process.platform === 'darwin') {
+                // macOS: MyApp.app/Contents/Resources/python-service/
+                executablePath = path.join(process.resourcesPath, 'python-service', executableName);
+            } else {
+                // Windows/Linux: MyApp/resources/python-service/  
+                executablePath = path.join(process.resourcesPath, 'python-service', executableName);
+            }
+        } else {
+            // In development: look for python-dist directory (created by PyInstaller locally)
+            const projectRoot = path.join(__dirname, '../../');
+            executablePath = path.join(projectRoot, 'python-dist', executableName);
+            
+            console.log(`🔧 Development mode - looking in: ${executablePath}`);
+            
+            // Check if bundled executable exists in development
+            const fs = require('fs');
+            if (!fs.existsSync(executablePath)) {
+                console.log(`⚠️  Bundled executable not found in development, will try venv fallback`);
+                return null; // Signal to use venv fallback
+            }
+        }
+        
+        console.log(`🎯 Target executable path: ${executablePath}`);
+        return executablePath;
+    }
+
     showServiceError() {
-        dialog.showErrorBox(
-            'Service Connection Error',
-            'Cannot connect to the Covenantrix Python service at 127.0.0.1:8080.\n\nPlease make sure the service is running:\n\n1. Open terminal\n2. cd covenantrix-v2\n3. venv\\Scripts\\activate\n4. cd core-rag-service\n5. python service_main.py\n\nThe service should show "Uvicorn running on http://127.0.0.1:8080"'
-        );
+        const isPackaged = app.isPackaged;
+        
+        if (isPackaged) {
+            // User is running packaged app
+            dialog.showErrorBox(
+                'Service Startup Failed',
+                'The Covenantrix analysis service failed to start.\n\nThis could be due to:\n• Antivirus software blocking the application\n• Missing system permissions\n• Corrupted installation\n\nTry restarting the application or reinstalling Covenantrix.\n\nIf the problem persists, please contact support.'
+            );
+        } else {
+            // Developer is running in development mode
+            dialog.showErrorBox(
+                'Development Service Error',
+                'Cannot start the bundled Python service.\n\nFor development:\n1. Build the Python executable first:\n   pyinstaller covenantrix-service.spec\n2. Or start the service manually:\n   cd core-rag-service\n   python service_main.py\n\nThe service should show "Uvicorn running on http://127.0.0.1:8080"'
+            );
+        }
     }
 
     disconnectFromService() {
@@ -203,7 +334,7 @@ class CovenantrixApp {
                                 type: 'info',
                                 title: 'About Covenantrix',
                                 message: 'Covenantrix Desktop',
-                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.0'
+                                detail: 'AI-Powered Legal Document Analysis\nVersion 1.0.3'
                             });
                         }
                     },

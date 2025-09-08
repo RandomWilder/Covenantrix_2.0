@@ -35,6 +35,71 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          
+      - name: Build Python service executable
+        run: |
+          echo "Building Python service for ${{ matrix.platform }}..."
+          pyinstaller covenantrix-service.spec --noconfirm --clean
+          echo "Build completed. Checking output..."
+          if [ -d "dist" ]; then
+            ls -la dist/
+            # Create python-dist directory to avoid conflict with Electron Builder
+            mkdir -p python-dist
+            if [ "${{ matrix.platform }}" == "win" ]; then
+              if [ -f "dist/covenantrix-service.exe" ]; then
+                echo "✅ Windows executable created successfully"
+                mv dist/covenantrix-service.exe python-dist/
+              else
+                echo "❌ Windows executable not found"
+                exit 1
+              fi
+            else
+              if [ -f "dist/covenantrix-service" ]; then
+                echo "✅ Unix executable created successfully"
+                mv dist/covenantrix-service python-dist/
+              else
+                echo "❌ Unix executable not found"
+                exit 1
+              fi
+            fi
+            # Clean up PyInstaller dist to avoid conflicts
+            rm -rf dist/
+            echo "Python executable moved to python-dist/"
+            ls -la python-dist/
+          else
+            echo "❌ No dist directory found"
+            exit 1
+          fi
+        shell: bash
+        
+      - name: Verify Python executable before build
+        run: |
+          echo "=== Verifying Python executable is ready for Electron Builder ==="
+          if [ -d "python-dist" ]; then
+            echo "✅ python-dist directory exists"
+            ls -la python-dist/
+            # Ensure executable permissions on Unix platforms
+            if [ "${{ matrix.platform }}" != "win" ]; then
+              chmod +x python-dist/covenantrix-service
+              echo "✅ Set executable permissions for Unix platform"
+            fi
+          else
+            echo "❌ python-dist directory missing - Electron Builder will fail"
+            exit 1
+          fi
+        shell: bash
+        
       - name: Build application
         run: npm run build:${{ matrix.platform }}
         env:

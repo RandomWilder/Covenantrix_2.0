@@ -1,6 +1,6 @@
 {
   "name": "covenantrix-desktop",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Covenantrix - AI-Powered Legal Document Analysis Desktop Application",
   "main": "electron-app/src/main.js",
   "author": "Covenantrix Team",
@@ -41,18 +41,21 @@
       "electron-app/build/**/*",
       "electron-app/src/main.js",
       "electron-app/src/preload.js",
-      "core-rag-service/**/*",
-      "!core-rag-service/covenantrix_data/**/*",
-      "!core-rag-service/__pycache__/**/*",
-      "!core-rag-service/test_service.py",
       "node_modules/**/*"
     ],
     "extraResources": [
       {
-        "from": "core-rag-service/",
-        "to": "core-rag-service/",
-        "filter": ["**/*", "!covenantrix_data/**/*", "!__pycache__/**/*", "!test_service.py"]
+        "from": "python-dist/",
+        "to": "python-service/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "core-rag-service/config.yaml",
+        "to": "python-service/config.yaml"
       }
+    ],
+    "asarUnpack": [
+      "**/python-service/**/*"
     ],
     "win": {
       "target": "nsis",
