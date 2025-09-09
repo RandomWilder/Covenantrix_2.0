@@ -58,7 +58,7 @@
         "to": "python-service/config.yaml"
       },
       {
-        "from": "service_main.py",
+        "from": "core-rag-service/service_main.py",
         "to": "python-service/service_main.py"
       },
       {
