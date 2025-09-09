@@ -1,0 +1,9 @@
+{
+  "name": "covenantrix-electron-frontend",
+  "version": "1.0.10",
+  "description": "Covenantrix Desktop Frontend",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Frontend is already built - static files ready\" && exit 0"
+  }
+}
