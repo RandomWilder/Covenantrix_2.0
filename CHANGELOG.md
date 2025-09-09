@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.11] - 2025-01-02
+
+### 🔧 CI Build Fix
+- **Fixed Build Failure**: Added missing `electron-app/package.json` to resolve CI build process errors
+- **Maintained Python Integration**: Preserved all Python service startup and packaging logic
+- **Static Frontend Build**: Configured minimal build script for existing HTML/JS frontend files
+
+---
+
 ## [1.0.10] - 2025-01-02
 
 ### ✅ Production-Ready Python Service Integration

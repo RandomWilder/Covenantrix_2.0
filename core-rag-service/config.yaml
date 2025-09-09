@@ -4,7 +4,7 @@
 # Application Settings
 app:
   name: "Covenantrix RAG Service"
-  version: "1.0.10"
+  version: "1.0.11"
   debug: false
   
 # Storage Configuration

@@ -262,7 +262,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Covenantrix RAG Service",
     description="AI-powered legal document analysis service",
-    version="1.0.10",
+    version="1.0.11",
     lifespan=lifespan
 )
 
@@ -298,7 +298,7 @@ async def health_check():
         
         return HealthCheck(
             status="healthy",
-            version="1.0.10",
+            version="1.0.11",
             timestamp=datetime.now().isoformat(),
             documents_processed=documents_count,
             service_name="Covenantrix RAG Service",
@@ -309,7 +309,7 @@ async def health_check():
         # Return degraded status instead of failing
         return HealthCheck(
             status="degraded",
-            version="1.0.10", 
+            version="1.0.11", 
             timestamp=datetime.now().isoformat(),
             documents_processed=0,
             service_name="Covenantrix RAG Service",
@@ -322,7 +322,7 @@ async def root():
     """Root endpoint that serves basic info"""
     return {
         "service": "Covenantrix RAG Service",
-        "version": "1.0.10",
+        "version": "1.0.11",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
         "docs_url": "/docs",
@@ -558,7 +558,7 @@ def main():
     parser = argparse.ArgumentParser(description='Covenantrix RAG Service')
     parser.add_argument('--port', type=int, default=8080, help='Port to run the service on')
     parser.add_argument('--host', default='127.0.0.1', help='Host to bind the service to')
-    parser.add_argument('--version', action='version', version='Covenantrix RAG Service 1.0.10')
+    parser.add_argument('--version', action='version', version='Covenantrix RAG Service 1.0.11')
     args = parser.parse_args()
     
     print("🚀 Starting Covenantrix RAG Service...")

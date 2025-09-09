@@ -1,6 +1,6 @@
 {
   "name": "covenantrix-electron-frontend",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Covenantrix Desktop Frontend",
   "private": true,
   "scripts": {
