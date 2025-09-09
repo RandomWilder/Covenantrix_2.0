@@ -9,7 +9,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="covenantrix-rag-service",
-    version="1.0.9",
+    version="1.0.10",
     author="Covenantrix Team",
     author_email="dev@covenantrix.com",
     description="AI-powered legal document analysis with advanced RAG capabilities",

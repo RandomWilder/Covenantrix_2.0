@@ -1,6 +1,6 @@
 {
   "name": "covenantrix-desktop",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Covenantrix - AI-Powered Legal Document Analysis Desktop Application",
   "main": "electron-app/src/main.js",
   "author": "Covenantrix Team",
@@ -44,7 +44,8 @@
       "electron-app/build/**/*",
       "electron-app/src/main.js",
       "electron-app/src/preload.js",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "!node_modules/.cache/**/*"
     ],
     "extraResources": [
       {
@@ -55,28 +56,85 @@
       {
         "from": "core-rag-service/config.yaml",
         "to": "python-service/config.yaml"
+      },
+      {
+        "from": "service_main.py",
+        "to": "python-service/service_main.py"
+      },
+      {
+        "from": "requirements.txt",
+        "to": "python-service/requirements.txt"
       }
     ],
     "asarUnpack": [
       "**/python-service/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "electron-app/assets/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "electron-app/assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "electron-app/assets/icon.icns"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "electron-app/assets/icon.icns",
+      "category": "public.app-category.productivity"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "electron-app/assets/icon.png"
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "electron-app/assets/icon.png",
+      "category": "Office"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "electron-app/assets/icon.ico",
-      "uninstallerIcon": "electron-app/assets/icon.ico"
+      "uninstallerIcon": "electron-app/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Covenantrix",
+      "include": "build/installer.nsh"
+    },
+    "dmg": {
+      "title": "Covenantrix ${version}",
+      "icon": "electron-app/assets/icon.icns",
+      "background": "electron-app/assets/dmg-background.png",
+      "window": {
+        "width": 600,
+        "height": 400
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 450,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "covenantrix-desktop"
     }
   }
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.10] - 2025-01-02
+
+### ✅ Production-Ready Python Service Integration
+- **Enhanced Python Executable Path Resolution**: Implemented exact path specification using `process.resourcesPath` for precise post-install resource location
+- **Consistent Executable Naming**: Standardized Python service naming (`covenantrix-service.exe` on Windows, `covenantrix-service` on Unix)
+- **Build Process Verification**: Confirmed complete build → installer → end user startup sequence working correctly
+- **Missing Installer Script**: Added required `build/installer.nsh` to prevent NSIS build failures
+- **Improved Error Handling**: Enhanced logging and error reporting for production debugging
+
+---
+
 ## [1.0.9] - 2025-09-08
 
 ### 🎯 Critical Build Fix

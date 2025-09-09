@@ -27,6 +27,7 @@ from pydantic import BaseModel
 import json
 import tempfile
 import shutil
+import argparse
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -74,6 +75,9 @@ class HealthCheck(BaseModel):
     version: str
     timestamp: str
     documents_processed: int
+    service_name: str
+    uptime_seconds: Optional[float] = None
+    initialization_status: str
 
 # Settings API models
 class ProviderKeyRequest(BaseModel):
@@ -106,6 +110,7 @@ class SettingsResponse(BaseModel):
 # Global service instance
 service_instance = None
 processing_tasks = {}
+service_start_time = datetime.now()
 
 class CovenantrixService:
     """
@@ -257,7 +262,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Covenantrix RAG Service",
     description="AI-powered legal document analysis service",
-    version="1.0.9",
+    version="1.0.10",
     lifespan=lifespan
 )
 
@@ -272,22 +277,57 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
-    """Health check endpoint"""
+    """Enhanced health check endpoint for Electron integration"""
+    global service_start_time
+    
     try:
-        documents = await service_instance.list_documents() if service_instance.initialized else []
+        # Calculate uptime
+        uptime = (datetime.now() - service_start_time).total_seconds()
+        
+        # Check if service is initialized
+        initialization_status = "initialized" if (service_instance and service_instance.initialized) else "initializing"
+        
+        # Get document count if possible
+        documents_count = 0
+        if service_instance and service_instance.initialized:
+            try:
+                documents = await service_instance.list_documents()
+                documents_count = len(documents)
+            except:
+                pass  # Don't fail health check if documents can't be counted
+        
         return HealthCheck(
             status="healthy",
-            version="1.0.9",
+            version="1.0.10",
             timestamp=datetime.now().isoformat(),
-            documents_processed=len(documents)
+            documents_processed=documents_count,
+            service_name="Covenantrix RAG Service",
+            uptime_seconds=uptime,
+            initialization_status=initialization_status
         )
-    except:
+    except Exception as e:
+        # Return degraded status instead of failing
         return HealthCheck(
-            status="starting",
-            version="1.0.9", 
+            status="degraded",
+            version="1.0.10", 
             timestamp=datetime.now().isoformat(),
-            documents_processed=0
+            documents_processed=0,
+            service_name="Covenantrix RAG Service",
+            uptime_seconds=(datetime.now() - service_start_time).total_seconds(),
+            initialization_status="error"
         )
+
+@app.get("/")
+async def root():
+    """Root endpoint that serves basic info"""
+    return {
+        "service": "Covenantrix RAG Service",
+        "version": "1.0.10",
+        "status": "running",
+        "timestamp": datetime.now().isoformat(),
+        "docs_url": "/docs",
+        "health_url": "/health"
+    }
 
 @app.post("/api/documents/upload")
 async def upload_document(
@@ -514,8 +554,16 @@ async def get_active_provider():
 
 def main():
     """Run the service"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Covenantrix RAG Service')
+    parser.add_argument('--port', type=int, default=8080, help='Port to run the service on')
+    parser.add_argument('--host', default='127.0.0.1', help='Host to bind the service to')
+    parser.add_argument('--version', action='version', version='Covenantrix RAG Service 1.0.10')
+    args = parser.parse_args()
+    
     print("🚀 Starting Covenantrix RAG Service...")
-    print("📖 API documentation will be available at http://localhost:8080/docs")
+    print(f"📖 API documentation will be available at http://{args.host}:{args.port}/docs")
+    print(f"❤️  Health check available at http://{args.host}:{args.port}/health")
     
     # Note: API key checking is now handled by the settings manager
     # The service can start without an API key and users can configure it via the settings UI
@@ -523,8 +571,8 @@ def main():
     
     uvicorn.run(
         "service_main:app",
-        host="127.0.0.1", 
-        port=8080,
+        host=args.host, 
+        port=args.port,
         log_level="info",
         reload=False  # Set to True for development
     )
